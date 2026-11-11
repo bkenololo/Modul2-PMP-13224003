@@ -136,7 +136,11 @@ int main(){
     // printf("\nEOF reached. Total numbers read: %d\n", count);
 
     // print(head);
-    print(headMati);
+    if(headMati == NULL){
+        printf("NONE";)
+    } else {
+        print(headMati);
+    }
 
 
     // input tak hingga sampai enter (integer semua)
