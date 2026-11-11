@@ -137,7 +137,7 @@ int main(){
 
     // print(head);
     if(headMati == NULL){
-        printf("NONE";)
+        printf("NONE");
     } else {
         print(headMati);
     }
