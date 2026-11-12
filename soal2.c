@@ -1,158 +1,104 @@
-/** EL2008 Praktikum Pemecahan Masalah dengan Pemrograman 2025/2026
-*   Modul               : Dynamic Structures
-*   Hari dan Tanggal    : Rabu, 11 November 2026
-*   Nama (NIM)          : Benedictus Kenneth Setiadi (13224003)
-*   Nama File           : soal2.c
-*   Deskripsi           : Program identifikasi bunga matahari yang tidak terkena sinar matahari, yaitu yang terhimpit oleh dua bunga yang lebih tinggi
-*/
-
+/* Soal 2: posisi bunga yang lebih pendek dari kedua tetangganya. */
 #include <stdio.h>
 #include <stdlib.h>
-#include <string.h>
 
-struct Bunga{
-    int index;
+typedef struct Bunga {
     int tinggi;
+    int posisi;
     struct Bunga *next;
-};
+} Bunga;
 
-struct Bunga* createNode(int tinggi, int index){
-    struct Bunga* newNode = (struct Bunga*)malloc(sizeof(struct Bunga));
-    newNode->tinggi = tinggi;
-    newNode->index = 0;
-    newNode->next = NULL;
-    return newNode;
+static void hapus_daftar(Bunga *head) {
+    while (head != NULL) {
+        Bunga *berikut = head->next;
+        free(head);
+        head = berikut;
+    }
 }
 
-void insertAtEnd(struct Bunga** head, int tinggi){
-    struct Bunga* newNode = createNode(tinggi, 0);
-    if(*head == NULL){
-        *head = newNode;
-        return;
-    }
-    struct Bunga* temp = *head;
-    while (temp->next != NULL)
-    {
-        temp = temp->next;
-    }
-    temp->next = newNode;
-    temp->next->index = temp->index+1;
+static int tambah_bunga(Bunga **head, Bunga **tail, int tinggi, int posisi) {
+    Bunga *baru = malloc(sizeof *baru);
+    if (baru == NULL) return 0;
+    baru->tinggi = tinggi;
+    baru->posisi = posisi;
+    baru->next = NULL;
+
+    if (*tail == NULL) *head = baru;
+    else (*tail)->next = baru;
+    *tail = baru;
+    return 1;
 }
 
-// void read(struct Bunga** head){
-//     // Variable to store each number read
-//     int num;
-//     // Counter for number of integers read
-//     int count = 0;
+/* Baca satu baris. Hasil: 1=angka, 0=akhir baris, -1=input salah. */
+static int baca_tinggi(int *hasil) {
+    int c, negatif = 0, ada_digit = 0;
+    unsigned int nilai = 0;
+    const unsigned int batas_positif = (~0u) >> 1;
+    unsigned int batas;
 
-//     printf("Enter your inputs or (PressCtrl+D on Unix or "
-//            "Ctrl+Z on Windows for EOF):\n");
-    
-//     // Read integers until EOF is encountered
-//     while (scanf("%d", &num) != EOF) {
-//         count++;
-//         insertAtEnd(&head, num);
-//         // Print each number with its count
-//         printf("You entered: Number %d: %d\n", count, num);
-//     }
+    do {
+        c = getchar();
+    } while (c == ' ' || c == '\t' || c == '\r');
+    if (c == '\n' || c == EOF) return 0;
 
-//     printf("\nEOF reached. Total numbers read: %d\n", count);
-// }
-
-void print(struct Bunga* head) {
-    struct Bunga* temp = head;
-    while (temp != NULL) {
-        if(temp->next == NULL){
-            printf("%d", temp->tinggi + 1);
-        } else {
-            printf("%d ", temp->tinggi + 1);
-        }
-        temp = temp->next;
+    if (c == '-' || c == '+') {
+        negatif = (c == '-');
+        c = getchar();
     }
-    printf("\n");
+    batas = negatif ? batas_positif + 1u : batas_positif;
+    while (c >= '0' && c <= '9') {
+        unsigned int digit = (unsigned int)(c - '0');
+        if (nilai > (batas - digit) / 10u) return -1;
+        nilai = nilai * 10u + digit;
+        ada_digit = 1;
+        c = getchar();
+    }
+    if (!ada_digit || (c != ' ' && c != '\t' && c != '\r' &&
+                       c != '\n' && c != EOF)) return -1;
+    if (c == '\n') ungetc(c, stdin);
+
+    if (negatif && nilai == batas_positif + 1u)
+        *hasil = -(int)batas_positif - 1;
+    else
+        *hasil = negatif ? -(int)nilai : (int)nilai;
+    return 1;
 }
 
-// struct Bunga* BungaMati(struct Bunga** head, struct Bunga** bungaMatihead){
-//     struct Bunga* temp = *head;
-//     struct Bunga* newNode = createNode(0, 0);
-//     if(*bungaMatihead == NULL){
-//         *head = newNode;
-//         return;
-//     }
-//     struct Bunga* tempMati = *bungaMatihead;
-//     // struct Bunga* temp = *head;
-//     while (temp->next != NULL)
-//     {
-//         if((temp->next->tinggi < temp->tinggi) && (temp->next->tinggi < temp->next->next->tinggi)){
-//             tempMati = tempMati->next;
-//         }
-//     }
-//     tempMati->next = newNode;
-//     temp->next->index = temp->index+1;
-//     // temp->next = newNode;
-//     // temp->next->index = temp->index+1;
-// }
+int main(void) {
+    Bunga *head = NULL, *tail = NULL;
+    Bunga *kiri, *tengah;
+    int tinggi, posisi = 1, status, ditemukan = 0;
 
-
-
-int main(){
-    // init
-    struct Bunga* head = NULL;
-    struct Bunga* headMati = NULL;
-
-    // insertAtEnd(&head, 14);
-    // insertAtEnd(&head, 2);
-    // insertAtEnd(&head, 20);
-
-    // print(head);
-    // read(&head);
-    // Variable to store each number read
-    int num;
-    // Counter for number of integers read
-    int count = 0;
-    
-    // Read integers until EOF is encountered
-    while (scanf("%d", &num) == 1) {
-        count++;
-        insertAtEnd(&head, num);
-        // Print each number with its count
-        int k = getchar();
-        if(k == '\n'){
-            break;
+    while ((status = baca_tinggi(&tinggi)) == 1) {
+        if (!tambah_bunga(&head, &tail, tinggi, posisi++)) {
+            hapus_daftar(head);
+            fputs("Gagal mengalokasikan memori\n", stderr);
+            return 1;
         }
     }
+    if (status < 0) {
+        hapus_daftar(head);
+        fputs("Input tinggi tidak valid\n", stderr);
+        return 1;
+    }
 
-    struct Bunga* prev = head;
-    struct Bunga* now = head->next;
-    while(now->next != NULL){
-        if(((now->tinggi) < (prev->tinggi)) && ((now->tinggi) < (now->next->tinggi))){
-            insertAtEnd(&headMati, now->index);
+    /* Bunga pertama dan terakhir tidak punya dua tetangga. */
+    if (head != NULL && head->next != NULL) {
+        kiri = head;
+        tengah = head->next;
+        while (tengah->next != NULL) {
+            if (tengah->tinggi < kiri->tinggi &&
+                tengah->tinggi < tengah->next->tinggi) {
+                if (ditemukan) putchar(' ');
+                printf("%d", tengah->posisi);
+                ditemukan = 1;
+            }
+            kiri = tengah;
+            tengah = tengah->next;
         }
-        prev = prev->next;
-        now = now->next;
     }
-    // printf("NULL\n");
-
-    // printf("\nEOF reached. Total numbers read: %d\n", count);
-
-    // print(head);
-    if(headMati == NULL){
-        printf("NONE");
-    } else {
-        print(headMati);
-    }
-
-
-    // input tak hingga sampai enter (integer semua)
-    
-
-    // input masuk ke storage (dynamic) tambahin index posisi dan status, buat struct
-
-    // cek tinggi 2 bunga yang menghimpit, ubah status jika tidak kena sinar
-
-    // tambahkan bunga tersebut ke dynamic storage baru
-
-    // print
-
-
-}   
+    if (!ditemukan) printf("NONE");
+    putchar('\n');
+    hapus_daftar(head);
+    return 0;
+}
