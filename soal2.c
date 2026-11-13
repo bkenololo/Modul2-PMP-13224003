@@ -1,35 +1,57 @@
-/* Soal 2: posisi bunga yang lebih pendek dari kedua tetangganya. */
+/** EL2008 Praktikum Pemecahan Masalah dengan Pemrograman 2025/2026
+*   Modul               : Dynamic Structures
+*   Hari dan Tanggal    : Rabu, 11 November 2026
+*   Nama (NIM)          : Benedictus Kenneth Setiadi (13224003)
+*   Nama File           : soal2.c
+*   Deskripsi           : Program identifikasi bunga matahari yang tidak terkena sinar matahari, yaitu yang terhimpit oleh dua bunga yang lebih tinggi
+*/
+
 #include <stdio.h>
 #include <stdlib.h>
 
-typedef struct Bunga {
+struct Bunga {
     int tinggi;
-    int posisi;
+    int index;
     struct Bunga *next;
-} Bunga;
+};
 
-static void hapus_daftar(Bunga *head) {
+static void freeList(struct Bunga *head) {
     while (head != NULL) {
-        Bunga *berikut = head->next;
+        struct Bunga *berikut = head->next;
         free(head);
         head = berikut;
     }
 }
 
-static int tambah_bunga(Bunga **head, Bunga **tail, int tinggi, int posisi) {
-    Bunga *baru = malloc(sizeof *baru);
-    if (baru == NULL) return 0;
-    baru->tinggi = tinggi;
-    baru->posisi = posisi;
-    baru->next = NULL;
+struct Bunga *createNode(int tinggi, int index) {
+    struct Bunga *newNode = malloc(sizeof *newNode);
+    if (newNode == NULL) return NULL;
+    newNode->tinggi = tinggi;
+    newNode->index = index;
+    newNode->next = NULL;
+    return newNode;
+}
 
-    if (*tail == NULL) *head = baru;
-    else (*tail)->next = baru;
-    *tail = baru;
+int insertAtEnd(struct Bunga **head, struct Bunga **tail,
+                int tinggi, int index) {
+    struct Bunga *newNode = createNode(tinggi, index);
+    if (newNode == NULL) return 0;
+    if (*tail == NULL) *head = newNode;
+    else (*tail)->next = newNode;
+    *tail = newNode;
     return 1;
 }
 
-/* Baca satu baris. Hasil: 1=angka, 0=akhir baris, -1=input salah. */
+void print(struct Bunga *head) {
+    struct Bunga *temp = head;
+    while (temp != NULL) {
+        if (temp != head) putchar(' ');
+        printf("%d", temp->tinggi);
+        temp = temp->next;
+    }
+    putchar('\n');
+}
+
 static int baca_tinggi(int *hasil) {
     int c, negatif = 0, ada_digit = 0;
     unsigned int nilai = 0;
@@ -65,40 +87,44 @@ static int baca_tinggi(int *hasil) {
 }
 
 int main(void) {
-    Bunga *head = NULL, *tail = NULL;
-    Bunga *kiri, *tengah;
-    int tinggi, posisi = 1, status, ditemukan = 0;
+    struct Bunga *head = NULL, *tail = NULL;
+    struct Bunga *headMati = NULL, *tailMati = NULL;
+    struct Bunga *prev, *now;
+    int tinggi, index = 1, status;
 
     while ((status = baca_tinggi(&tinggi)) == 1) {
-        if (!tambah_bunga(&head, &tail, tinggi, posisi++)) {
-            hapus_daftar(head);
+        if (!insertAtEnd(&head, &tail, tinggi, index++)) {
+            freeList(head);
             fputs("Gagal mengalokasikan memori\n", stderr);
             return 1;
         }
     }
     if (status < 0) {
-        hapus_daftar(head);
+        freeList(head);
         fputs("Input tinggi tidak valid\n", stderr);
         return 1;
     }
 
-    /* Bunga pertama dan terakhir tidak punya dua tetangga. */
     if (head != NULL && head->next != NULL) {
-        kiri = head;
-        tengah = head->next;
-        while (tengah->next != NULL) {
-            if (tengah->tinggi < kiri->tinggi &&
-                tengah->tinggi < tengah->next->tinggi) {
-                if (ditemukan) putchar(' ');
-                printf("%d", tengah->posisi);
-                ditemukan = 1;
+        prev = head;
+        now = head->next;
+        while (now->next != NULL) {
+            if (now->tinggi < prev->tinggi &&
+                now->tinggi < now->next->tinggi) {
+                if (!insertAtEnd(&headMati, &tailMati, now->index, 0)) {
+                    freeList(head);
+                    freeList(headMati);
+                    fputs("Gagal mengalokasikan memori\n", stderr);
+                    return 1;
+                }
             }
-            kiri = tengah;
-            tengah = tengah->next;
+            prev = now;
+            now = now->next;
         }
     }
-    if (!ditemukan) printf("NONE");
-    putchar('\n');
-    hapus_daftar(head);
+    if (headMati == NULL) puts("NONE");
+    else print(headMati);
+    freeList(head);
+    freeList(headMati);
     return 0;
 }
